@@ -1,0 +1,531 @@
+<title>team_schedule 미리보기</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  /* Layout: single centered reading column; distinct "surfaces" — soft flow cards,
+     a dark terminal console, and Slack-style chat bubbles — each marked by role. */
+  :root {
+    --bg: #f4f6fb;
+    --surface: #ffffff;
+    --surface-2: #eceffa;
+    --fg: #1b1d27;
+    --muted: #595f77;
+    --border: #e1e4f1;
+    --accent: #4f46e5;
+    --accent-soft: #e8e7ff;
+    --warn: #b45309;
+    --warn-soft: #fbecd4;
+    --dup: #6d28d9;
+    --dup-soft: #ece3fb;
+    --ok: #15803d;
+    /* terminal — intentionally dark in both themes */
+    --term-bg: #14161f;
+    --term-panel: #1d2030;
+    --term-fg: #d8dcea;
+    --term-dim: #8089a3;
+    --term-green: #7ee787;
+    --term-amber: #f0b429;
+    --term-cyan: #56b6c2;
+    /* slack */
+    --slack-bar: #4a154b;
+    --slack-name: var(--fg);
+    --shadow: 0 1px 2px rgba(20,22,40,.06), 0 8px 24px rgba(20,22,40,.06);
+    --mono: "JetBrains Mono", "Noto Sans KR", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --sans: "Noto Sans KR", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1016;
+      --surface: #161922;
+      --surface-2: #1d2130;
+      --fg: #e8eaf2;
+      --muted: #a2a9c0;
+      --border: #272c3b;
+      --accent: #8c88ff;
+      --accent-soft: #272552;
+      --warn: #e2a13a;
+      --warn-soft: #3a2f1a;
+      --dup: #b79cf5;
+      --dup-soft: #2b2342;
+      --ok: #5cc98a;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.4);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1016;
+    --surface: #161922;
+    --surface-2: #1d2130;
+    --fg: #e8eaf2;
+    --muted: #a2a9c0;
+    --border: #272c3b;
+    --accent: #8c88ff;
+    --accent-soft: #272552;
+    --warn: #e2a13a;
+    --warn-soft: #3a2f1a;
+    --dup: #b79cf5;
+    --dup-soft: #2b2342;
+    --ok: #5cc98a;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.4);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--sans);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  .wrap {
+    max-width: 860px;
+    margin: 0 auto;
+    padding-left: max(18px, env(safe-area-inset-left, 0px));
+    padding-right: max(18px, env(safe-area-inset-right, 0px));
+    padding-block: 0;
+  }
+
+  /* ---------- header ---------- */
+  header.top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-block: 20px 8px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: .92rem; letter-spacing: .01em; }
+  .brand .dot {
+    width: 30px; height: 30px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--accent), #7c73ff);
+    display: grid; place-items: center; font-size: 1rem; flex: none;
+  }
+  .brand code { font-family: var(--mono); font-size: .82rem; color: var(--muted); font-weight: 500; }
+  .themebtn {
+    appearance: none; border: 1px solid var(--border); background: var(--surface);
+    color: var(--muted); border-radius: 10px; padding: 7px 11px; cursor: pointer;
+    font-family: var(--sans); font-size: .82rem; font-weight: 600; flex: none;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .themebtn:hover { color: var(--fg); border-color: var(--accent); }
+  .themebtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- hero ---------- */
+  .hero { padding-block: 10px 6px; }
+  .hero h1 {
+    font-size: clamp(1.7rem, 5.2vw, 2.5rem);
+    line-height: 1.18; font-weight: 800; letter-spacing: -0.01em;
+    text-wrap: balance; margin: 0 0 12px;
+  }
+  .hero h1 b { color: var(--accent); }
+  .hero .lead { font-size: 1.04rem; color: var(--muted); max-width: 60ch; margin: 0; }
+
+  .framing {
+    margin-top: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 14px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+  }
+  .framing .k { font-weight: 700; display: block; margin-bottom: 6px; font-size: .96rem; }
+  .framing p { margin: 0; color: var(--muted); font-size: .92rem; }
+  .framing .where { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .wtag {
+    font-size: .8rem; font-weight: 600; border-radius: 999px; padding: 5px 11px;
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--fg);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+
+  /* ---------- section scaffold ---------- */
+  section { padding-block: 34px 6px; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: .74rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 8px;
+  }
+  .eyebrow .pip { width: 7px; height: 7px; border-radius: 2px; background: var(--accent); }
+  h2 { font-size: clamp(1.25rem, 3.6vw, 1.55rem); font-weight: 800; margin: 0 0 6px; letter-spacing: -0.01em; text-wrap: balance; }
+  .sub { color: var(--muted); margin: 0 0 20px; font-size: .95rem; max-width: 62ch; }
+
+  /* ---------- flow cards ---------- */
+  .flows { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .flow {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 15px;
+    padding: 16px 16px 17px; box-shadow: var(--shadow); min-width: 0;
+    display: flex; flex-direction: column; gap: 9px;
+  }
+  .flow .fh { display: flex; align-items: center; gap: 10px; }
+  .flow .num {
+    width: 30px; height: 30px; border-radius: 9px; flex: none;
+    background: var(--accent-soft); color: var(--accent);
+    display: grid; place-items: center; font-weight: 800; font-size: 1rem;
+  }
+  .flow .ficon { font-size: 1.15rem; }
+  .flow h3 { margin: 0; font-size: 1rem; font-weight: 700; }
+  .flow code {
+    font-family: var(--mono); font-size: .76rem; color: var(--accent);
+    background: var(--accent-soft); padding: 2px 7px; border-radius: 6px; font-weight: 500;
+    align-self: flex-start;
+  }
+  .flow p { margin: 0; color: var(--muted); font-size: .9rem; }
+
+  /* ---------- terminal console ---------- */
+  .console {
+    background: var(--term-bg); border-radius: 14px; overflow: hidden;
+    box-shadow: var(--shadow); border: 1px solid rgba(255,255,255,.06);
+  }
+  .console .bar {
+    display: flex; align-items: center; gap: 7px; padding: 11px 14px;
+    background: var(--term-panel); border-bottom: 1px solid rgba(255,255,255,.05);
+  }
+  .console .bar i { width: 11px; height: 11px; border-radius: 50%; display: block; }
+  .console .bar .r { background: #ff5f56; } .console .bar .y { background: #ffbd2e; } .console .bar .g { background: #27c93f; }
+  .console .bar span { margin-left: 8px; color: var(--term-dim); font-family: var(--mono); font-size: .76rem; }
+  .console .body { padding: 15px 16px; overflow-x: auto; }
+  .console pre, .console .ln {
+    font-family: var(--mono); font-size: .82rem; line-height: 1.75; color: var(--term-fg);
+    margin: 0; white-space: pre;
+  }
+  .console .prompt { color: var(--term-green); }
+  .console .flag { color: var(--term-cyan); }
+  .console .out { color: var(--term-dim); }
+  .console .ok { color: var(--term-green); }
+  .console .box { color: var(--term-fg); }
+  .console .cmt { color: var(--term-amber); }
+  .note {
+    font-size: .82rem; color: var(--muted); margin: 10px 2px 0;
+    display: flex; gap: 7px; align-items: flex-start;
+  }
+  .note::before { content: "ⓘ"; color: var(--accent); flex: none; }
+
+  /* ---------- slack bubbles ---------- */
+  .flowlabel {
+    display: flex; align-items: center; gap: 9px; margin: 26px 0 11px;
+    font-weight: 700; font-size: 1.02rem;
+  }
+  .flowlabel .num {
+    width: 26px; height: 26px; border-radius: 8px; flex: none;
+    background: var(--accent-soft); color: var(--accent);
+    display: grid; place-items: center; font-weight: 800; font-size: .9rem;
+  }
+  .flowlabel .cmd { font-family: var(--mono); font-size: .76rem; color: var(--muted); font-weight: 500; }
+  .slack {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 15px 16px; box-shadow: var(--shadow); display: flex; gap: 12px; min-width: 0;
+  }
+  .slack + .slack { margin-top: 10px; }
+  .slack .avatar {
+    width: 38px; height: 38px; border-radius: 9px; flex: none;
+    background: linear-gradient(135deg, var(--slack-bar), #7a3b7c);
+    display: grid; place-items: center; font-size: 1.1rem;
+  }
+  .slack .msg { min-width: 0; flex: 1; }
+  .slack .meta { display: flex; align-items: center; gap: 7px; margin-bottom: 3px; flex-wrap: wrap; }
+  .slack .who { font-weight: 700; color: var(--slack-name); font-size: .92rem; }
+  .slack .appbadge {
+    font-size: .64rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
+    background: var(--surface-2); color: var(--muted); border-radius: 4px; padding: 1px 5px;
+    border: 1px solid var(--border);
+  }
+  .slack .time { color: var(--muted); font-size: .76rem; }
+  .slack .text {
+    white-space: pre-wrap; word-break: break-word; font-size: .92rem; line-height: 1.6;
+    font-variant-numeric: tabular-nums;
+  }
+  .slack .text strong { font-weight: 700; }
+  .slack .text .evt { display: block; }
+  .slack .text a.link { color: var(--accent); text-decoration: none; }
+  .slack.warn .avatar { background: linear-gradient(135deg, var(--warn), #d98324); }
+  .slack.dup .avatar { background: linear-gradient(135deg, var(--dup), #9b6bff); }
+
+  .badge-rec {
+    display: inline-flex; align-items: center; gap: 7px; margin-top: 12px;
+    background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: .84rem;
+    border-radius: 999px; padding: 7px 14px;
+  }
+
+  /* ---------- setup (details) ---------- */
+  details.setup {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  details.setup > summary {
+    list-style: none; cursor: pointer; padding: 16px 18px; font-weight: 700; font-size: 1rem;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  details.setup > summary::-webkit-details-marker { display: none; }
+  details.setup > summary .chev { transition: transform .2s ease; color: var(--muted); }
+  details.setup[open] > summary .chev { transform: rotate(90deg); }
+  .setup .inner { padding: 0 18px 18px; display: flex; flex-direction: column; gap: 16px; }
+  .steps { display: grid; gap: 10px; counter-reset: s; }
+  .step { display: flex; gap: 12px; align-items: flex-start; }
+  .step .sn {
+    flex: none; width: 24px; height: 24px; border-radius: 7px; background: var(--accent-soft);
+    color: var(--accent); font-weight: 800; font-size: .82rem; display: grid; place-items: center;
+  }
+  .step .sb { font-size: .92rem; color: var(--fg); }
+  .step .sb .m { color: var(--muted); }
+  .envgrid { display: grid; gap: 7px; }
+  .envrow {
+    font-family: var(--mono); font-size: .8rem; background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 11px; overflow-x: auto;
+    white-space: nowrap;
+  }
+  .envrow b { color: var(--accent); font-weight: 700; }
+
+  /* ---------- sample-data callout ---------- */
+  .sample {
+    margin-top: 16px; background: var(--warn-soft); border: 1px solid transparent;
+    border-radius: 12px; padding: 13px 15px; font-size: .88rem; color: var(--fg);
+    display: flex; gap: 9px; align-items: flex-start;
+  }
+  .sample b { font-weight: 700; }
+  .sample .ic { flex: none; }
+
+  footer {
+    padding-block: 30px 34px; margin-top: 30px; border-top: 1px solid var(--border);
+    color: var(--muted); font-size: .82rem; text-align: center;
+  }
+  footer code { font-family: var(--mono); }
+
+  @media (max-width: 560px) {
+    .flows { grid-template-columns: 1fr; }
+    .hero .lead { font-size: .98rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="dot">📅</span>
+      <span>팀 공유 캘린더 <code>team_schedule</code></span>
+    </div>
+    <button class="themebtn" id="themeToggle" type="button" aria-label="라이트/다크 전환">
+      <span id="themeIcon">🌙</span><span id="themeLabel">다크</span>
+    </button>
+  </header>
+
+  <div class="hero">
+    <h1>화면에서 보는 <b>team_schedule</b><br>팀 일정 도우미</h1>
+    <p class="lead">버튼을 누르는 웹사이트가 아니에요. 명령어 한 줄로 실행하거나 매일 자동으로 돌아가면서, 팀의 구글 공유 캘린더를 정리해 Slack으로 알려주는 도구예요. 이 페이지는 그 결과가 실제로 어떻게 생겼는지 보여주는 <b>미리보기</b>입니다.</p>
+
+    <div class="framing">
+      <span class="k">이건 어떻게 생긴 도구인가요?</span>
+      <p>클릭하는 화면이 따로 있는 게 아니라, 터미널에서 <code>python -m team_schedule ...</code> 명령으로 실행하거나 매일 정해진 시각에 자동(cron / GitHub Actions)으로 돌아갑니다. 그 “결과”는 두 곳에 나타나요.</p>
+      <div class="where">
+        <span class="wtag">🖥️ 터미널(콘솔) 화면</span>
+        <span class="wtag">💬 Slack 알림 메시지</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== A. 한눈에 보기 ===== -->
+  <section id="overview">
+    <div class="eyebrow"><span class="pip"></span>한눈에 보기</div>
+    <h2>네 가지 일을 합니다</h2>
+    <p class="sub">각 기능은 명령어 하나에 대응돼요. 새 일정을 알려주고, 일정을 요약하고, 반복 일정을 만들고, 겹치는 일정을 찾아줍니다.</p>
+    <div class="flows">
+      <div class="flow">
+        <div class="fh"><span class="num">1</span><span class="ficon">🆕</span></div>
+        <h3>새 일정 알림</h3>
+        <code>notify-new</code>
+        <p>공유 캘린더에 새로 생긴 일정만 골라 Slack으로 알림을 보냅니다.</p>
+      </div>
+      <div class="flow">
+        <div class="fh"><span class="num">2</span><span class="ficon">📋</span></div>
+        <h3>일정 요약</h3>
+        <code>summary --daily / --weekly</code>
+        <p>오늘 또는 이번 주의 일정을 보기 좋게 정리해서 보여줍니다.</p>
+      </div>
+      <div class="flow">
+        <div class="fh"><span class="num">3</span><span class="ficon">🔁</span></div>
+        <h3>반복 일정 등록</h3>
+        <code>add-recurring</code>
+        <p>매주 반복되는 일정(예: 스탠드업)을 캘린더에 자동으로 만들어 줍니다.</p>
+      </div>
+      <div class="flow">
+        <div class="fh"><span class="num">4</span><span class="ficon">⚠️</span></div>
+        <h3>중복/겹침 확인</h3>
+        <code>check-conflicts</code>
+        <p>시간이 겹치거나 똑같이 중복된 일정을 찾아 알려줍니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== B. 터미널 요약 박스 ===== -->
+  <section id="console">
+    <div class="eyebrow"><span class="pip"></span>터미널 화면</div>
+    <h2>콘솔에 뜨는 요약 박스</h2>
+    <p class="sub">명령어를 입력하면 터미널에 이렇게 테두리 박스로 그려진 요약이 나타납니다. 아래는 “일간 요약”을 실행한 모습이에요.</p>
+    <div class="console">
+      <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>team_schedule — 터미널</span></div>
+      <div class="body">
+<div class="ln"><span class="prompt">$</span> python -m team_schedule summary <span class="flag">--daily</span></div>
+<pre class="box">
+┌───────────────────────────────────┐
+│ 📅 2026-01-05 (월) 일정            │
+│ 09:00–09:15  데일리 스탠드업  · 2명 │
+│ 10:00–11:00  디자인 리뷰           │
+└───────────────────────────────────┘</pre>
+<div class="ln"><span class="ok">✓ 일간 요약을 전송했습니다</span></div>
+      </div>
+    </div>
+    <p class="note">한글과 이모지는 글자 폭이 넓어서 테두리가 완벽히 맞아떨어지진 않아요. 실제 도구는 글자 폭을 계산해(width-aware) 최대한 가지런하게 그립니다.</p>
+  </section>
+
+  <!-- ===== C. 슬랙 알림 ===== -->
+  <section id="slack">
+    <div class="eyebrow"><span class="pip"></span>Slack 알림</div>
+    <h2>Slack에 도착하는 메시지</h2>
+    <p class="sub">같은 내용이 팀 Slack 채널에도 메시지로 올라옵니다. “Team Schedule”이라는 앱(봇)이 보내는 것처럼 보여요. 네 가지 기능이 각각 어떤 메시지를 보내는지 볼게요.</p>
+
+    <!-- Flow 1 -->
+    <div class="flowlabel"><span class="num">1</span> 새 일정 알림 <span class="cmd">notify-new</span></div>
+    <div class="slack">
+      <div class="avatar">🆕</div>
+      <div class="msg">
+        <div class="meta"><span class="who">Team Schedule</span><span class="appbadge">앱</span><span class="time">오전 9:02</span></div>
+        <div class="text"><span class="evt">🆕 <strong>디자인 리뷰</strong></span><span class="evt">🕒 2026-01-05 10:00–11:00</span><span class="evt">📍 회의실 A</span><span class="evt">👥 a@example.com, b@example.com (2명)</span><span class="evt">🔗 <a class="link" href="#">캘린더 링크</a></span></div>
+      </div>
+    </div>
+    <p class="note">새로 추가된 일정 1건마다 이런 메시지가 하나씩 올라옵니다.</p>
+
+    <!-- Flow 2 daily -->
+    <div class="flowlabel"><span class="num">2</span> 일정 요약 · 일간 <span class="cmd">summary --daily</span></div>
+    <div class="slack">
+      <div class="avatar">📅</div>
+      <div class="msg">
+        <div class="meta"><span class="who">Team Schedule</span><span class="appbadge">앱</span><span class="time">오전 8:00</span></div>
+        <div class="text"><span class="evt"><strong>📅 2026-01-05 (월) 일정</strong></span><span class="evt">09:00–09:15  데일리 스탠드업  · 2명</span><span class="evt">10:00–11:00  디자인 리뷰</span></div>
+      </div>
+    </div>
+
+    <!-- Flow 2 weekly -->
+    <div class="flowlabel"><span class="num">2</span> 일정 요약 · 주간 <span class="cmd">summary --weekly</span></div>
+    <div class="slack">
+      <div class="avatar">🗓️</div>
+      <div class="msg">
+        <div class="meta"><span class="who">Team Schedule</span><span class="appbadge">앱</span><span class="time">월요일 오전 8:00</span></div>
+        <div class="text"><span class="evt"><strong>🗓 2026-01-05 주간 일정</strong></span><span class="evt"> </span><span class="evt"><strong>01-05 (월)</strong></span><span class="evt">  09:00–09:15  데일리 스탠드업  · 2명</span><span class="evt"><strong>01-06 (화)</strong></span><span class="evt">  일정 없음</span><span class="evt"><strong>01-07 (수)</strong></span><span class="evt">  09:00–09:15  데일리 스탠드업  · 2명</span><span class="evt"><strong>01-08 (목)</strong></span><span class="evt">  14:00–15:00  고객 미팅</span></div>
+      </div>
+    </div>
+    <p class="note">한 주를 요일별로 나눠서 보여줍니다. (예시는 4일치만 보여줬어요.)</p>
+
+    <!-- Flow 3 -->
+    <div class="flowlabel"><span class="num">3</span> 반복 일정 등록 <span class="cmd">add-recurring</span></div>
+    <p class="sub" style="margin-bottom:12px">이 기능은 Slack 메시지를 보내지 않아요. 대신 캘린더에 반복 일정을 직접 만들고, 터미널에 결과를 보여줍니다.</p>
+    <div class="console">
+      <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>team_schedule — 터미널</span></div>
+      <div class="body">
+<pre class="box"><span class="prompt">$</span> python -m team_schedule add-recurring \
+    <span class="flag">--summary</span> "데일리 스탠드업" \
+    <span class="flag">--start</span> 2026-01-05T09:00:00+09:00 \
+    <span class="flag">--end</span>   2026-01-05T09:15:00+09:00 \
+    <span class="flag">--freq</span> WEEKLY <span class="flag">--byday</span> MO,WE,FR <span class="flag">--count</span> 10</pre>
+<div class="ln"><span class="ok">✓ 반복 일정을 생성했습니다: </span><span class="out">evt_8f3a21c9</span></div>
+<div class="ln out"># 구글 캘린더에 RRULE 규칙을 직접 넣습니다</div>
+<div class="ln"><span class="cmt">  FREQ=WEEKLY;BYDAY=MO,WE,FR;COUNT=10</span></div>
+      </div>
+    </div>
+    <span class="badge-rec">🔁 매주 월·수·금 09:00 반복 · 총 10회</span>
+
+    <!-- Flow 4 -->
+    <div class="flowlabel"><span class="num">4</span> 중복/겹침 확인 <span class="cmd">check-conflicts</span></div>
+    <div class="slack warn">
+      <div class="avatar">⚠️</div>
+      <div class="msg">
+        <div class="meta"><span class="who">Team Schedule</span><span class="appbadge">앱</span><span class="time">오전 8:05</span></div>
+        <div class="text"><span class="evt">⚠️ <strong>겹치는 일정</strong></span><span class="evt">• 디자인 리뷰 (2026-01-05 10:00–11:00) ↔ 1:1 미팅 (2026-01-05 10:30–11:00)</span></div>
+      </div>
+    </div>
+    <div class="slack dup">
+      <div class="avatar">♻️</div>
+      <div class="msg">
+        <div class="meta"><span class="who">Team Schedule</span><span class="appbadge">앱</span><span class="time">오전 8:05</span></div>
+        <div class="text"><span class="evt">♻️ <strong>중복 일정</strong></span><span class="evt">• 주간회의, 주간회의 (2건)</span></div>
+      </div>
+    </div>
+    <p class="note">시간이 겹치는 일정(↔)과 똑같이 중복 등록된 일정(♻️)을 각각 찾아 알려줍니다.</p>
+  </section>
+
+  <!-- ===== D. 실행 방법 / 설정 ===== -->
+  <section id="setup">
+    <div class="eyebrow"><span class="pip"></span>실행 방법 · 설정</div>
+    <h2>어떻게 돌아가나요?</h2>
+    <p class="sub">명령어를 직접 입력해서 실행하거나, 매일 정해진 시각에 자동으로 돌게 해둘 수 있어요. 실제 캘린더와 연결하려면 아래 3가지 준비물이 필요합니다.</p>
+    <details class="setup">
+      <summary>연결에 필요한 3가지 준비물 보기 <span class="chev">›</span></summary>
+      <div class="inner">
+        <div class="steps">
+          <div class="step"><span class="sn">1</span><span class="sb"><b>구글 서비스 계정 JSON 키</b> + Calendar API 사용 설정 <span class="m">— 도구가 캘린더를 읽기 위한 열쇠예요.</span></span></div>
+          <div class="step"><span class="sn">2</span><span class="sb"><b>공유 캘린더에 서비스 계정 이메일 공유</b> <span class="m">— 그 열쇠에게 캘린더 보기 권한을 줍니다.</span></span></div>
+          <div class="step"><span class="sn">3</span><span class="sb"><b>Slack Incoming Webhook URL</b> <span class="m">— 알림을 보낼 Slack 채널 주소예요.</span></span></div>
+        </div>
+        <div>
+          <div class="sub" style="margin:0 0 8px; font-weight:700; color:var(--fg)">환경 변수</div>
+          <div class="envgrid">
+            <div class="envrow"><b>GOOGLE_CALENDAR_ID</b> = 공유 캘린더 ID</div>
+            <div class="envrow"><b>GOOGLE_SERVICE_ACCOUNT_FILE</b> = 서비스 계정 JSON 경로</div>
+            <div class="envrow"><b>SLACK_WEBHOOK_URL</b> = Slack 수신 웹훅 주소</div>
+            <div class="envrow"><b>TEAM_SCHEDULE_TZ</b> = Asia/Seoul</div>
+          </div>
+        </div>
+        <p class="sub" style="margin:0">자세한 설정 방법은 저장소의 README에 정리돼 있어요.</p>
+      </div>
+    </details>
+
+    <div class="sample">
+      <span class="ic">💡</span>
+      <span>이 페이지에 보이는 일정(<b>디자인 리뷰</b>, <b>데일리 스탠드업</b> 등)은 모두 설명용 <b>예시 데이터</b>예요. 여러분의 실제 캘린더가 아닙니다. 준비물을 연결하면 그때부터 도구가 실제 구글 캘린더의 내용을 그대로 읽어옵니다.</span>
+    </div>
+  </section>
+
+  <footer>
+    team_schedule 미리보기 · 실제 출력은 터미널과 Slack에 나타납니다<br>
+    <code>python -m team_schedule --help</code>
+  </footer>
+</div>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+    var btn = document.getElementById('themeToggle');
+    var icon = document.getElementById('themeIcon');
+    var label = document.getElementById('themeLabel');
+
+    function systemDark() {
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    function currentDark() {
+      var t = root.getAttribute('data-theme');
+      if (t === 'dark') return true;
+      if (t === 'light') return false;
+      return systemDark();
+    }
+    function paint() {
+      var dark = currentDark();
+      icon.textContent = dark ? '☀️' : '🌙';
+      label.textContent = dark ? '라이트' : '다크';
+    }
+    try {
+      var saved = localStorage.getItem('ts-theme');
+      if (saved === 'dark' || saved === 'light') root.setAttribute('data-theme', saved);
+    } catch (e) {}
+    paint();
+
+    btn.addEventListener('click', function () {
+      var next = currentDark() ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem('ts-theme', next); } catch (e) {}
+      paint();
+    });
+  })();
+</script>
