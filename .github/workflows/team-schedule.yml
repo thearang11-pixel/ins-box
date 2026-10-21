@@ -1,0 +1,39 @@
+# 팀 공유 일정 워크플로우 (스케줄 전용).
+# 기존 test CI 에 영향을 주지 않도록 push / pull_request 로는 절대 실행되지 않습니다.
+name: team-schedule
+
+on:
+  schedule:
+    # 매일 00:00 UTC = 09:00 KST 에 하루 요약 + 새 일정 점검
+    - cron: "0 0 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      GOOGLE_CALENDAR_ID: ${{ secrets.GOOGLE_CALENDAR_ID }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      # 서비스 계정 키는 아래 단계에서 파일로 쓴 뒤 이 경로를 사용합니다.
+      GOOGLE_SERVICE_ACCOUNT_FILE: ${{ github.workspace }}/service-account.json
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # 실제 구글 캘린더 접근에 필요한 라이브러리 설치
+      - run: pip install -r requirements.txt
+
+      # 서비스 계정 JSON 시크릿을 파일로 저장 (실행 전 단계)
+      - name: 서비스 계정 키 파일 생성
+        run: |
+          printf '%s' "$GOOGLE_SERVICE_ACCOUNT_JSON" > "$GOOGLE_SERVICE_ACCOUNT_FILE"
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+
+      # 새 일정 알림
+      - run: python -m team_schedule notify-new
+
+      # 하루 요약 전송
+      - run: python -m team_schedule summary --daily

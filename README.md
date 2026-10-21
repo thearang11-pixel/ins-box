@@ -23,3 +23,103 @@ pytest
 ```
 
 `main` 브랜치에 푸시하거나 PR을 열면 GitHub Actions에서 테스트가 자동으로 실행돼요.
+
+## 팀 공유 일정 워크플로우 (team_schedule)
+
+구글 캘린더(공유 캘린더)를 기반으로 팀 일정을 자동으로 관리하는 패키지예요.
+핵심 로직은 모두 파이썬 표준 라이브러리로만 작성되어 있고, 구글 API는
+`team_schedule/gcal.py` 안에서만 **지연 import** 로 사용돼요. 덕분에 구글
+라이브러리를 설치하지 않아도 `import team_schedule` 와 테스트가 잘 돌아가요.
+Slack 전송도 `urllib` 만 쓰기 때문에 `requests` 같은 외부 의존성이 없어요.
+
+### 네 가지 흐름
+
+1. **새 일정 알림(`notify-new`)** — 다가오는 일정을 조회해서 이전에 못 보던
+   새 일정을 Slack 으로 알려줘요. 상태 파일로 중복 알림을 막고, 첫 실행에는
+   현재 일정을 조용히 기록(prime)만 해서 폭탄 알림을 피해요.
+2. **일정 요약(`summary`)** — 하루(`--daily`) 또는 한 주(`--weekly`) 일정을
+   한국어로 정리해 Slack 으로 보내요.
+3. **충돌 점검(`check-conflicts`)** — 기간 내 겹치는 일정과 중복(제목이 같고
+   시간이 겹치는) 일정을 찾아 있을 때만 알려줘요.
+4. **반복 일정 추가(`add-recurring`)** — RFC5545 RRULE 을 만들어 반복 일정을
+   공유 캘린더에 생성해요.
+
+### 설치
+
+```bash
+pip install -r requirements.txt
+```
+
+`requirements.txt` 의 구글 패키지는 **실제 구글 캘린더 접근에만** 필요해요.
+테스트만 돌릴 거면 `pip install pytest` 만으로 충분해요.
+
+### 구글 서비스 계정 만들기 + 캘린더 공유
+
+1. [Google Cloud Console](https://console.cloud.google.com/) 에서 프로젝트를
+   만들고 **Google Calendar API** 를 사용 설정해요.
+2. **IAM 및 관리자 → 서비스 계정** 에서 서비스 계정을 만들고, 키를 **JSON**
+   형식으로 내려받아요. 이 파일 경로를 `GOOGLE_SERVICE_ACCOUNT_FILE` 로 지정해요.
+3. 공유하려는 구글 캘린더의 **설정 → 특정 사용자와 공유** 에서 위 서비스 계정
+   이메일(`...@...iam.gserviceaccount.com`)을 추가하고, 반복 일정도 만들 거면
+   **일정 변경** 권한을 줘요. (읽기만 하면 "모든 일정 세부정보 보기" 로 충분)
+4. 캘린더 ID(설정 화면의 "캘린더 통합" 에 있는 값)를 `GOOGLE_CALENDAR_ID` 로
+   지정해요.
+
+### 환경변수
+
+`.env.example` 를 참고하세요.
+
+| 변수 | 설명 |
+| --- | --- |
+| `GOOGLE_CALENDAR_ID` | 공유 캘린더 ID |
+| `GOOGLE_SERVICE_ACCOUNT_FILE` | 서비스 계정 키(JSON) 파일 경로 |
+| `SLACK_WEBHOOK_URL` | Slack Incoming Webhook URL |
+| `TEAM_SCHEDULE_STATE_FILE` | 상태 저장 파일 (기본 `.team_schedule_state.json`) |
+| `TEAM_SCHEDULE_TZ` | 기준 시간대 (기본 `Asia/Seoul`) |
+
+### CLI 사용 예시
+
+```bash
+# 새 일정 알림
+python -m team_schedule notify-new
+
+# 오늘 하루 요약 / 특정 날짜 요약 / 이번 주 요약
+python -m team_schedule summary --daily
+python -m team_schedule summary --daily --date 2026-01-05
+python -m team_schedule summary --weekly
+
+# 충돌(겹침/중복) 점검
+python -m team_schedule check-conflicts
+
+# 반복 일정 추가 (매주 월·수·금 09:00, 10회)
+python -m team_schedule add-recurring \
+  --summary "데일리 스탠드업" \
+  --start 2026-01-05T09:00:00+09:00 \
+  --end   2026-01-05T09:15:00+09:00 \
+  --freq WEEKLY --byday MO,WE,FR --count 10 \
+  --attendees a@example.com,b@example.com
+```
+
+### cron / GitHub Actions 스케줄 예시
+
+`.github/workflows/team-schedule.yml` 에 매일 09:00 KST(00:00 UTC) 요약 +
+새 일정 점검을 하는 스케줄 워크플로우가 들어 있어요. 이 워크플로우는
+`push` / `pull_request` 로는 **실행되지 않아서** 기존 `test` CI 에 영향을 주지
+않아요. 저장소 시크릿으로 `GOOGLE_SERVICE_ACCOUNT_JSON`, `GOOGLE_CALENDAR_ID`,
+`SLACK_WEBHOOK_URL` 을 등록하면 돼요.
+
+직접 cron 으로 돌리고 싶다면 (매일 09:00 KST):
+
+```cron
+0 9 * * *  cd /path/to/ins-box && python -m team_schedule notify-new && python -m team_schedule summary --daily
+```
+
+### 테스트
+
+테스트는 **구글 라이브러리 없이** 돌아가요. 가짜 캘린더 클라이언트와
+`SlackNotifier` 의 `dry_run` 모드를 써서 네트워크 없이 모든 흐름을 검증해요.
+
+```bash
+pip install pytest
+pytest
+```

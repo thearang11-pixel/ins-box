@@ -1,3 +1,8 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# team_schedule 로컬 상태/비밀
+.env
+.team_schedule_state.json
+service-account.json

@@ -1,0 +1,5 @@
+# 아래 패키지는 실제 구글 캘린더 접근(gcal 모듈)에만 필요합니다.
+# 테스트 스위트는 이 패키지들이 없어도 동작합니다 (pytest 만 있으면 됩니다).
+google-api-python-client
+google-auth
+google-auth-oauthlib
