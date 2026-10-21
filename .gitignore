@@ -6,3 +6,7 @@ __pycache__/
 .env
 .team_schedule_state.json
 service-account.json
+
+# 웹 UI SQLite DB 파일
+*.db
+team_schedule.db

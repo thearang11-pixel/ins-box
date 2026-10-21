@@ -13,5 +13,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install pytest
+      # 웹 UI 테스트(FastAPI TestClient)까지 함께 돌리기 위해 웹 의존성도 설치합니다.
+      - run: pip install pytest httpx fastapi uvicorn jinja2 python-multipart
       - run: pytest -v

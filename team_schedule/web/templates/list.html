@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}일정 목록 · 팀 일정{% endblock %}
+{% block content %}
+<div class="row-between">
+  <h1>일정 목록</h1>
+  <a class="btn" href="/events/new">+ 새 일정 추가</a>
+</div>
+
+<form class="filter" method="get" action="/events">
+  <label>시작일 <input type="date" name="start" value="{{ start }}"></label>
+  <label>종료일 <input type="date" name="end" value="{{ end }}"></label>
+  <button type="submit">조회</button>
+  <a class="btn-ghost" href="/events">초기화</a>
+</form>
+
+{% if conflict_ids %}
+<p class="notice warn">⚠️ 겹치거나 중복으로 보이는 일정이 {{ conflict_ids|length }}건 있습니다. 아래 표에서 표시됩니다.</p>
+{% endif %}
+
+{% if events %}
+<table class="events">
+  <thead>
+    <tr><th>제목</th><th>시작</th><th>종료</th><th>장소</th><th>참석</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for e in events %}
+    <tr class="{{ 'conflict' if e.id in conflict_ids }}">
+      <td data-label="제목">
+        {{ e.summary }}
+        {% if e.all_day %}<span class="tag">종일</span>{% endif %}
+        {% if e.id in conflict_ids %}<span class="tag warn">충돌</span>{% endif %}
+      </td>
+      <td data-label="시작">{{ e.start | dt }}</td>
+      <td data-label="종료">{{ e.end | dt }}</td>
+      <td data-label="장소">{{ e.location }}</td>
+      <td data-label="참석">{{ e.attendees|length if e.attendees else 0 }}명</td>
+      <td class="actions" data-label="작업">
+        <a href="/events/{{ e.id }}/edit">수정</a>
+        <form method="post" action="/events/{{ e.id }}/delete"
+              onsubmit="return confirm('이 일정을 삭제할까요?');">
+          <button type="submit" class="link-danger">삭제</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">표시할 일정이 없습니다. 새 일정을 추가해 보세요.</p>
+{% endif %}
+{% endblock %}

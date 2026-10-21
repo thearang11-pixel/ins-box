@@ -123,3 +123,75 @@ python -m team_schedule add-recurring \
 pip install pytest
 pytest
 ```
+
+웹 UI 라우트 테스트까지 함께 돌리려면 웹 의존성도 설치하세요.
+
+```bash
+pip install pytest httpx fastapi uvicorn jinja2 python-multipart
+pytest
+```
+
+## 웹 UI (team_schedule.web) — 브라우저로 일정 보기/관리
+
+Slack 밖에서도 팀원이 **브라우저로** 일정을 보고 관리할 수 있도록
+**FastAPI + SQLite** 로 만든 서버 렌더링 웹 앱이에요. 프론트엔드 빌드
+과정이 전혀 없고(Jinja2 서버 렌더링), **구글 자격 증명 없이도** 동작/테스트
+할 수 있어요. 일정은 SQLite DB 에 저장돼요.
+
+### 특징
+
+- **FastAPI + Jinja2**: 빌드 단계 없는 순수 HTML. 데스크톱/모바일 반응형 CSS.
+- **SQLite 저장소**: 표준 라이브러리 `sqlite3` 만 사용(추가 DB 의존성 없음).
+  - `events` — 웹에서 관리하는 팀 일정(추가/수정/삭제 대상)
+  - `seen_events` — 기존 JSON "이미 본 일정" 상태의 SQLite 버전
+    (`team_schedule.web.db.SqliteSeenStore`). 여러 프로세스(cron 작업 + 웹 서버)가
+    하나의 DB 파일을 공유할 수 있어요.
+  - `notifications` — 웹에서 발생한 추가/수정/삭제 내역(최근 알림 내역 페이지)
+- **도메인 로직 재사용**: 겹침/중복 탐지는 `team_schedule.overlap`, 요약은
+  `team_schedule.summary` 를 그대로 **import** 해서 써요(중복 구현 없음).
+
+### 페이지
+
+| 경로 | 내용 |
+| --- | --- |
+| `/` | 대시보드 — 오늘/이번 주 요약(기존 요약 로직 재사용), 겹침/중복 건수 |
+| `/events` | 일정 목록 — 날짜로 필터링, 겹침/중복 일정은 "충돌" 로 표시 |
+| `/events/new` | 일정 추가 폼 |
+| `/events/{id}/edit` | 일정 수정 폼 |
+| `/notifications` | 최근 알림(추가/수정/삭제) 내역 |
+| `/healthz` | 헬스 체크(JSON) |
+
+### 실행
+
+```bash
+pip install fastapi uvicorn jinja2 python-multipart
+
+# 방법 1
+uvicorn team_schedule.web.app:app --reload
+
+# 방법 2 (환경변수로 호스트/포트 조정 가능)
+python -m team_schedule.web
+```
+
+기본값은 `http://127.0.0.1:8000` 이에요.
+
+### 환경변수 (웹)
+
+| 변수 | 설명 |
+| --- | --- |
+| `TEAM_SCHEDULE_DB` | SQLite 파일 경로 (기본 `team_schedule.db`) |
+| `TEAM_SCHEDULE_TZ` | 기준 시간대 (기본 `Asia/Seoul`) |
+| `TEAM_SCHEDULE_WEB_HOST` | 바인드 호스트 (기본 `127.0.0.1`) |
+| `TEAM_SCHEDULE_WEB_PORT` | 포트 (기본 `8000`) |
+
+### Slack/cron 흐름과의 관계
+
+- 기존 **CLI/cron/Slack** 흐름(`notify-new`, `summary`, `check-conflicts`,
+  `add-recurring`)은 **구글 캘린더**를 원본으로 삼고 Slack 으로 알림을 보내요.
+- **웹 UI** 는 **SQLite DB** 를 원본으로 삼아 브라우저에서 보기/관리하게 해줘요.
+  구글 연동은 선택 사항이라 자격 증명이 없어도 웹은 완전히 동작해요.
+- 두 세계는 저장소를 공유할 수 있어요. 예를 들어 cron 워크플로우가 JSON 상태
+  대신 `SqliteSeenStore(path)` 를 쓰면, 같은 SQLite 파일을 웹 서버와 공유하면서
+  "이미 본 일정" 상태를 함께 관리할 수 있어요.
+- (선택) 구글 캘린더와 양방향 동기화를 붙이고 싶다면 `team_schedule.gcal`
+  (지연 import) 를 이용해 DB ↔ 캘린더 동기 계층을 추가로 얹을 수 있어요.

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}팀 일정 관리{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="/">📅 팀 일정</a>
+      <nav>
+        <a href="/" class="{{ 'on' if active == 'dashboard' }}">대시보드</a>
+        <a href="/events" class="{{ 'on' if active == 'events' }}">일정 목록</a>
+        <a href="/notifications" class="{{ 'on' if active == 'notifications' }}">알림 내역</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="wrap muted">
+    team_schedule · FastAPI + SQLite · 구글 캘린더 자격 증명 없이도 동작합니다
+  </footer>
+</body>
+</html>

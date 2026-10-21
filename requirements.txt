@@ -3,3 +3,11 @@
 google-api-python-client
 google-auth
 google-auth-oauthlib
+
+# --- 웹 UI (team_schedule.web) 실행에 필요한 패키지 ---
+# SQLite 저장소는 표준 라이브러리 sqlite3 를 쓰므로 추가 의존성이 없습니다.
+# 웹 라우트 테스트(TestClient)에는 httpx 도 필요합니다.
+fastapi
+uvicorn
+jinja2
+python-multipart

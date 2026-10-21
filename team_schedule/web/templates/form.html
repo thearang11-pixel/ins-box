@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{{ "일정 수정" if event and event.id else "새 일정" }} · 팀 일정{% endblock %}
+{% block content %}
+<h1>{{ "일정 수정" if event and event.id else "새 일정 추가" }}</h1>
+
+{% if error %}
+<p class="notice warn">{{ error }}</p>
+{% endif %}
+
+<form class="eventform" method="post"
+      action="{{ '/events/' ~ event.id if event and event.id else '/events' }}">
+  <label>제목 *
+    <input type="text" name="summary" required
+           value="{{ event.summary if event else '' }}">
+  </label>
+
+  <div class="two">
+    <label>시작 *
+      <input type="datetime-local" name="start" required
+             value="{{ event.start | dtlocal if event else '' }}">
+    </label>
+    <label>종료 *
+      <input type="datetime-local" name="end" required
+             value="{{ event.end | dtlocal if event else '' }}">
+    </label>
+  </div>
+
+  <label class="check">
+    <input type="checkbox" name="all_day" value="1"
+           {{ 'checked' if event and event.all_day }}>
+    종일 일정
+  </label>
+
+  <label>장소
+    <input type="text" name="location" value="{{ event.location if event else '' }}">
+  </label>
+
+  <label>참석자 (이메일, 쉼표로 구분)
+    <input type="text" name="attendees"
+           value="{{ event.attendees | join(', ') if event and event.attendees else '' }}">
+  </label>
+
+  <label>설명
+    <textarea name="description" rows="3">{{ event.description if event else '' }}</textarea>
+  </label>
+
+  <div class="row">
+    <button type="submit" class="btn">저장</button>
+    <a class="btn-ghost" href="/events">취소</a>
+  </div>
+</form>
+{% endblock %}

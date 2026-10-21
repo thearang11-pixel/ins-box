@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}알림 내역 · 팀 일정{% endblock %}
+{% block content %}
+<h1>최근 알림 내역</h1>
+<p class="muted">웹에서 발생한 일정 추가/수정/삭제 내역입니다.</p>
+
+{% if items %}
+<table class="events">
+  <thead><tr><th>시각</th><th>종류</th><th>내용</th></tr></thead>
+  <tbody>
+    {% for it in items %}
+    <tr>
+      <td>{{ it.created_at | dt }}</td>
+      <td><span class="tag">{{ it.kind }}</span></td>
+      <td>{{ it.message }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">아직 기록된 알림이 없습니다.</p>
+{% endif %}
+{% endblock %}
